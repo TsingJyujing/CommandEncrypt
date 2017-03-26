@@ -1,447 +1,619 @@
+#define RSA_C 1
+
 #include "rsa.h"
-#include <conio.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
-#include <time.h>
-#include <Windows.h>
 
-signed char R[DATALENGTH], PK[DATALENGTH], RsaKey[DATALENGTH];
-signed char SK[DATALENGTH];
-unsigned char DesKey[9];
-byteint R, SK, PK, RsaKey;
-mtype Model[TESTNUM];
-byteint ONEVALUE, ZEROVALUE, TWOVALUE, EIGHTVALUE;
+/*
+* math library stuff
+*/
 
-int ShoutBlockingHook(void){
+/*
+* sign = ts(extInteger a) -- test signed, returns 1, 0 or -1
+*/
+int ts(extInteger a)
+{
+	uint32 i = BIG_INTEGER_SIZE;
+	if (a[BIG_INTEGER_SIZE - 1] & SIGN_BIT)
+		return -1;
+	while (i--)
+		if (*a++)
+			return 1;
 	return 0;
 }
 
-int RsaPrepare(byteint sk, byteint pk, byteint r){
-	byteint p, q, Rvalue, buf1, buf2;
-	Mdata();
-	InitInt();
-	Prime(p);
-	Prime(q);
-	Multiply(p, q, r);
-	Substract(p, ONEVALUE, buf1);
-	Substract(q, ONEVALUE, buf2);
-	Multiply(buf1, buf2, Rvalue);
-	ComputingPK(Rvalue, sk, pk);
-	return TRUE;
+/*
+* carry = ng(extInteger a) -- negate, returns carry
+*/
+uint32 ng(extInteger a)
+{
+	uint32 c = 0, i = BIG_INTEGER_SIZE;
+	while (i--) {
+		c = 0 - *a - c;
+		*a++ = c;
+		c = (c >> UNIT_BITS) & 1;
+	} return c;
 }
 
-int ReadRsaFile(byteint r, byteint pk, byteint sk) 
+/*
+* cl(extInteger a) -- clear value, a = 0
+*/
+void cl(extInteger a)
 {
-	char file[80], temp[100 + 1];
-
-	sprintf(file, "%s/rsa.dat", szDataPath);
-	printf("FILE READING:%s\n", file);
-	if (GetPrivateProfileString("RSA", "R", "", temp, 100, (LPCWSTR)file) != 0)
-		StrToByt(temp, r);
-	else
-		return FALSE;
-	if (GetPrivateProfileString("RSA", "PK", "", temp, 100, (LPCWSTR)file) != 0)
-		StrToByt(temp, pk);
-	else
-		return FALSE;
-	if (GetPrivateProfileString("RSA", "SK", "", temp, 100, (LPCWSTR)file) != 0)
-		StrToByt(temp, sk);
-	else
-		return FALSE;
-
-	return TRUE;
+	uint32 i = 0;
+	while (i++ < BIG_INTEGER_SIZE)
+		*a++ = 0;
 }
 
-int WriteRsaFile(byteint r, byteint pk, byteint sk)
+/*
+* cp(extInteger a, extInteger b) -- copy, a = b
+*/
+void cp(extInteger a, extInteger b)
 {
-	char file[80], temp[100 + 1];
-	sprintf(file, "%s/rsa.dat", szDataPath);
-	printf("FILE WRITING:%s\n", file);
-	memset(temp, 0, 100 + 1);
-	BytToStr(r, temp);
-	if (WritePrivateProfileString("RSA", "R", temp, (LPCWSTR)file) == 0)
-		return FALSE;
-	memset(temp, 0, 100 + 1);
-	BytToStr(pk, temp);
-	if (WritePrivateProfileString("RSA", "PK", temp, (LPCWSTR)file) == 0)
-		return FALSE;
-	memset(temp, 0, 100 + 1);
-	BytToStr(sk, temp);
-	if (WritePrivateProfileString("RSA", "SK", temp, (LPCWSTR)file) == 0)
-		return FALSE;
-
-	return TRUE;
+	uint32 i = BIG_INTEGER_SIZE;
+	while (i--)
+		*a++ = *b++;
 }
 
-
-int DecipherDesKey(byteint rsakey, byteint r, byteint sk, char *deskey)
+/*
+* flag = cu(a, b) -- compare unsigned, returns <0 if a<b, 0 if a==b, >0 if a>b
+*/
+int cu(extInteger a, extInteger b)
 {
-	byteint buf1;
-	signed char flag[400];
-	Mdata();
-	InitInt();
-	TransBi(sk, flag);
-	PowerMode(rsakey, r, buf1, flag);
-	BytToStr(buf1, deskey);
+	uint32 i = BIG_INTEGER_SIZE;
+	a += BIG_INTEGER_SIZE;
+	b += BIG_INTEGER_SIZE;
+	while (i--)
+		if (*--a - *--b)
+			return (int)*a - (int)*b;
 	return 0;
 }
 
-void InitInt(void)
+/*
+* carry = ad(extInteger a, extInteger b) -- add, a += b
+*/
+uint32 ad(extInteger a, extInteger b)
 {
-	SetZero(ONEVALUE);
-	ONEVALUE[DATALENGTH - 1] = 1;
-	SetZero(ZEROVALUE);
-	SetZero(TWOVALUE);
-	TWOVALUE[DATALENGTH - 1] = 2;
-	SetZero(EIGHTVALUE);
-	EIGHTVALUE[DATALENGTH - 1] = 8;
-	//randomize();
-	srand((unsigned)time(NULL));
+	uint32 c = 0, i = BIG_INTEGER_SIZE;
+	while (i--) {
+		c = *b++ + *a + c;
+		*a++ = c;
+		c >>= UNIT_BITS;
+	}
+	return c;
 }
 
-void Multiply(byteint A, byteint B, byteint C)
+/*
+* carry = sb(extInteger a, extInteger b) -- substract, a -= b
+*/
+
+uint32 sb(extInteger a, extInteger b)
 {
-	register i, j, w;
-	int X, Y, Z;
-	int Avalid = 0;
-	int Bvalid = 0;
-	while (A[Avalid] == 0 && Avalid <DATALENGTH)
-		Avalid++;
-	while (B[Bvalid] == 0 && Bvalid <DATALENGTH)
-		Bvalid++;
-	SetZero(C);
-	for (i = DATALENGTH - 1; i >= Avalid; i--)
-	{
-		for (j = DATALENGTH - 1; j >= Bvalid; j--)
-		{
-			X = A[i] * B[j];
-			Y = X / 10;
-			Z = X - 10 * Y;
-			w = i + j - (DATALENGTH - 1);
-			C[w] = C[w] + Z;
-			C[w - 1] = C[w - 1] + (C[w] / 10) + Y;
-			C[w] = C[w] - (C[w] / 10) * 10;
+	uint32 c = 0, i = BIG_INTEGER_SIZE;
+	while (i--) {
+		c = *a - *b++ - c;
+		*a++ = c;
+		c = (c >> UNIT_BITS) & 1;
+	}
+	return c;
+}
+
+/*
+* carry = sr(extInteger a) -- shift right, a >>= 1
+*/
+
+uint32 sr(extInteger a)
+{
+	uint32 c = 0, i = BIG_INTEGER_SIZE;
+	a += BIG_INTEGER_SIZE;
+	while (i--) {
+		c |= *--a;
+		*a = c >> 1;
+		c = (c & 1) << UNIT_BITS;
+	}
+	return c;
+}
+
+/*
+* carry = sl(extInteger a) -- shift left, a <<= 1
+*/
+
+uint32 sl(extInteger a)
+{
+	uint32 c = 0, i = BIG_INTEGER_SIZE;
+	while (i--) {
+		c |= (uint32)* a << 1;
+		*a++ = c;
+		c = (c >> UNIT_BITS) & 1;
+	}
+	return c;
+}
+
+/*
+* dm(extInteger a, extInteger b, extInteger c) -- divide-modulo unsigned, a = a / b, c = a % b
+*/
+
+void dm(extInteger a, extInteger b, extInteger c)
+{
+	uint32 i = BIG_INTEGER_SIZE * UNIT_BITS;
+	cl(c);
+	while (i--) {
+		sl(c);
+		*c |= sl(a);
+		if (sb(c, b)) {
+			ad(c, b);
+		}
+		else {
+			*a |= 1;
 		}
 	}
 }
 
-void SetZero(byteint A)
+/*
+* remainder = di(extInteger a, int n) -- divide by integer
+*/
+
+uint32 di(extInteger a, uint32 t)
 {
-	memset(A, 0, DATALENGTH);
-}
-
-void IntCpy(byteint A, byteint B)
-{
-	memcpy(A, B, DATALENGTH);
-}
-
-void Plus(byteint A, byteint B, byteint C)
-{
-	register i;
-	int X, Y, Z, m, n, valid;
-
-	m = IntValid(A);
-	n = IntValid(B);
-	valid = (m>n) ? m + 1 : n + 1;
-	SetZero(C);
-	for (i = DATALENGTH - 1; i >= DATALENGTH - valid; i--)
-	{
-		X = A[i] + B[i];
-		Y = X / 10;
-		Z = X - 10 * Y;
-
-		C[i] = C[i] + Z;
-		C[i - 1] = C[i - 1] + Y;
+	uint32 c = 0, i = BIG_INTEGER_SIZE;
+	while (i--) {
+		c = (c << UNIT_BITS) | a[i];
+		a[i] = c / t;
+		c = c % t;
 	}
+	return c;
 }
 
-void Substract(byteint SA, byteint SB, byteint SC)
+/*
+* mu(extInteger a, extInteger b) -- multiply unsigned, a *= b
+*/
+
+void mu(extInteger a, extInteger b)
 {
-	byteint buf;
-	register i, j;
-	int X;
-
-	IntCpy(buf, SA);
-	SetZero(SC);
-
-	for (i = DATALENGTH - 1; i >= 0; i--)
-	{
-		if (buf[i]<SB[i]){
-			buf[i] += 10;
-			if (buf[i - 1]>0)
-				(buf[i - 1])--;
-			else {
-				j = i - 1;
-				while (buf[j] == 0)
-					buf[j--] = 9;
-				buf[j]--;
-			}
-		}
-		X = buf[i] - SB[i];
-		SC[i] = X;
+	uint32 i = BIG_INTEGER_SIZE * UNIT_BITS;
+	bigInteger c;
+	cl(c);
+	while (i--) {
+		sl(c);
+		if (sl(a))
+			ad(c, b);
 	}
+	cp(a, c);
 }
 
-int IntCmp(byteint A, byteint B)
-{
-	int stat;
+/*
+* mm(extInteger a, extInteger b, extInteger m) -- modular multiply, a = a * b mod m
+*/
 
-	stat = memcmp(A, B, DATALENGTH);
-	if (stat == 0)
-		return 0;
-	if (stat>0)
-		return 1;
-	return -1;
+void mm(extInteger a, extInteger b, extInteger m)
+{
+	uint32 i = BIG_INTEGER_SIZE * UNIT_BITS;
+	bigInteger c;
+	cl(c);
+	while (i--) {
+		sl(c);
+		if (sb(c, m))
+			ad(c, m);
+		if (sl(a))
+			ad(c, b);
+		if (sb(c, m))
+			ad(c, m);
+	}
+	cp(a, c);
 }
 
-int IntValid(byteint validtemp)
+/*
+* pmm(extInteger a, extInteger b, extInteger m, uint32 p) -- internal modmul w/precision for modexp
+*/
+
+#ifndef AMIGA
+
+static void
+pmm(extInteger aa, extInteger b, extInteger m, uint32 p)
 {
-	register i = 0;
-	while (validtemp[i] == 0 && i<DATALENGTH)
-		i++;
-	return DATALENGTH - i;
-}
-
-void SetMode(byteint A, byteint B, byteint C, byteint D)
-{
-	register i, j, k;
-
-	int valid_1, valid_2, valid, sbits, cmpval;
-	byteint buf1, buf2;
-
-	SetZero(D);
-	IntCpy(C, A);
-	valid_2 = IntValid(B);
-	while ((cmpval = IntCmp(C, B))>0){
-		valid_1 = IntValid(C);
-		valid = valid_1 - valid_2;
-		if (valid>0){
-			i = DATALENGTH - valid_1;
-			j = DATALENGTH - valid_2;
-			sbits = 0;
-			for (k = j; k<DATALENGTH; k++){
-				if (C[i]>B[j])
-					break;
-				if (C[i]<B[j]){
-					sbits = 1;
-					break;
+	uint32 k, c, j = UNIT_BITS, i;
+	bigInteger v;
+	extInteger a;
+	i = p;
+	cl(v);
+	a = aa + p;
+	while (!*--a
+		&& i)
+		i--;
+	if (i) {
+		while (!(*a & (1 << j)) && j)
+			j--;
+		cp(v, b);
+	} while (i--) {
+		while (j--) {
+			for (k = 0, c = 0; k < p; k++) {
+				c |= (uint32)v[k] << 1;
+				v
+					[k] = c;
+				c >>= UNIT_BITS;
+			} for (k = 0, c = 0; k < p; k++) {
+				c = v[k] - m[k] - c;
+				v[k] = c;
+				c = (c >> UNIT_BITS) & 1;
+			} if (c)
+				for (k = 0, c = 0; k < p; k++) {
+				c = v[k] + m[k] + c;
+				v[k] = c;
+				c >>= UNIT_BITS;
+				} if (*a & (1 << j)) {
+				for (k = 0, c = 0; k < p; k++) {
+					c = v[k] + b[k] + c;
+					v[k] = c;
+					c >>= UNIT_BITS;
+				} for (k = 0, c = 0; k < p; k++) {
+					c = v[k] - m[k] - c;
+					v[k] = c;
+					c = (c >> UNIT_BITS) & 1;
+				} if (c)
+					for (k = 0, c = 0; k < p; k++) {
+					c = v[k] + m[k] + c;
+					v[k] = c;
+					c >>= UNIT_BITS;
+					}
 				}
-				i++; j++;
-			}
-			valid = valid - sbits;
-			SetZero(buf1);
-			for (i = valid; i<DATALENGTH; i++){
-				j = i - valid;
-				buf1[j] = B[i];
-			}
+		}
+		a--;
+		j = UNIT_BITS;
+	}
+	cp(aa, v);
+}
+
+#endif
+
+/*
+* em(extInteger a, extInteger b, extInteger m) -- modular exponentation, a = a^b mod n
+*/
+
+void em(extInteger a, extInteger e, extInteger m)
+{
+	uint32 i = BIG_INTEGER_SIZE, j = UNIT_BITS, p = BIG_INTEGER_SIZE;
+	bigInteger c;
+	extInteger mp;
+	cl(c);
+	*c = 1;
+	e += BIG_INTEGER_SIZE;
+	while (!*--e && i)
+		i--;
+	if (i) {
+		while (!(*e & (1 << j)))
+			j--;
+		cp(c, a);
+	}
+	mp = m + BIG_INTEGER_SIZE;
+	while (!*--mp && p)
+		p--;
+	if (*mp & SIGN_BIT && p < BIG_INTEGER_SIZE)
+		p++;
+	while (i--) {
+		while (j--) {
+			pmm(c, c, m, p);
+			if (*e & (1 << j))
+				pmm(c, a, m, p);
+		}
+		e--;
+		j = UNIT_BITS;
+	}
+	cp(a, c);
+}
+
+/*
+* gd(extInteger a, extInteger b) -- a = greatest common divisor(a,b)
+*/
+
+void gd(extInteger a, extInteger bb)
+{
+	bigInteger r, b;
+	cp(b, bb);
+	while (ts(b)) {
+		dm(a, b, r);
+		cp(a, b);
+		cp(b, r);
+	}
+}
+
+/*
+* iv(extInteger a, extInteger b) -- multiplicative inverse, a = a^{-1} mod b
+*/
+
+void iv(extInteger a, extInteger b)
+{
+	bigInteger c, d, e, f, g, y;
+	cp(c, b);
+	cl(e);
+	cl(f);
+	*f = 1;
+	while (ts(a)) {
+		cp(y, c);
+		dm(y, a, d);
+		if (f[BIG_INTEGER_SIZE - 1] & SIGN_BIT) {
+			ng(f);
+			mu(y, f);
+			ng(f);
+			ng(y);
 		}
 		else
-			IntCpy(buf1, B);
-
-		D[DATALENGTH - 1 - valid]++;
-		Substract(C, buf1, buf2);
-		IntCpy(C, buf2);
+			mu(y, f);
+		cp(g, e);
+		sb(g, y);
+		cp(c, a);
+		cp(a, d);
+		cp(e, f);
+		cp(f, g);
 	}
-
-	if (cmpval == 0){
-		SetZero(C);
-		D[DATALENGTH - 1]++;
-	}
+	if (e[BIG_INTEGER_SIZE - 1] & SIGN_BIT)
+		ad(e, b);
+	cp(a, e);
 }
 
-void IntRandom(byteint RandomA, int num)
+/*
+* nh(char *a, extInteger b) -- convert value to a hex string (use for debugging)
+*/
+
+void nh(char *a, extInteger b)
 {
-	int i;
-	SetZero(RandomA);
-	while (!(RandomA[DATALENGTH - 1] % 2))
-		RandomA[DATALENGTH - 1] = rand() % 10;
-
-	while (!RandomA[DATALENGTH - num])
-		RandomA[DATALENGTH - num] = rand() % 10;
-
-	i = DATALENGTH - 2;
-	while (i >= DATALENGTH - num + 1)
-		RandomA[i--] = rand() % 10;
-}
-
-void LoadInt(byteint A, mtype B)
-{
-	register i, j;
-
-	SetZero(A);
-	i = DATALENGTH - 1;
-	j = MLENGTH - 1;
-	while (j >= 0)
-		A[i--] = B[j--];
-}
-
-void Mdata(void)
-{
-	register i, j;
-
-	int k = MLENGTH - 2;
-	memset(Model, 0, TESTNUM*MLENGTH);
-	for (i = 0; i<TESTNUM; i++){
-		for (j = MLENGTH - 1; j >= k; j--)
-			Model[i][j] = rand() % 10;
-		k -= 1;
+	char *d = "0123456789abcdef";
+	bigInteger c;
+	uint32 i = BIG_INTEGER_SIZE * sizeof(uint16) * 2; /* 2 digits/byte! */
+	cp(c, b);
+	a += BIG_INTEGER_SIZE * sizeof(uint16) * 2;
+	*a = 0;
+	while (i--) {
+		*--a = d[*c & 15];
+		sr(c);
+		sr(c);
+		sr(c);
+		sr(c);
 	}
 }
 
-void TransBi(byteint B, signed char flag[400])
-{
-	byteint buf;
-	byteint result;
-	byteint temp;
-	register i;
+/*
+* hn(extInteger a, char *b) -- lower-case hex string to value (use for constants)
+*/
 
-	memset(flag, 0, 400);
-	i = 399;
-	IntCpy(buf, B);
-	while (IntCmp(buf, ZEROVALUE) == 1){
-		ShoutBlockingHook();
-		SetMode(buf, TWOVALUE, temp, result);
-		flag[i] = temp[DATALENGTH - 1];
-		IntCpy(buf, result);
+void hn(extInteger a, char *b)
+{
+	cl(a);
+	while (*b) {
+		sl(a);
+		sl(a);
+		sl(a);
+		sl(a);
+		*a += *b < 'a' ? *b - '0' : *b - ('a' - 10);
+		b++;
+	}
+}
+
+/*
+* prime generation and RSA stuff
+*/
+static short text[BIG_INTEGER_SIZE] = {
+	12, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+
+
+static uint32 sp[PRIMES] = {
+	2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53,
+	59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131,
+	137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199, 211, 223,
+	227, 229 };
+
+/*
+* divisor = sieve_prime(extInteger n) -- try to find divisor of n by sieving
+* with small integers returns divisor or 0 if no divisor found.
+*/
+
+uint32 sieve_prime(extInteger n)
+{
+	uint32 i;
+	bigInteger a;
+	for (i = 0; i<PRIMES; i++) {
+		cp(a, n);
+		if (!di(a, sp[i]))
+			return (sp[i]);
+	}
+	return (0);
+}
+
+/*
+* flag = prob_prime(extInteger n) -- test if 2^(n-1) mod n == 1. Returns 0 if
+* test failed, !0 if success. Large n which passes this test is a
+* probable prime. This test does not work well with small value of n.
+* Because this test is slow, you should first try sieving n.
+*/
+
+int prob_prime(extInteger m)
+{
+	uint32 i = BIG_INTEGER_SIZE, j = UNIT_BITS, p = BIG_INTEGER_SIZE;
+	bigInteger c, ee;
+	extInteger mp, e = ee + BIG_INTEGER_SIZE;
+	cl(c);
+	*c = 1;
+	cp(ee, m);
+	sb(ee, c);
+	while (!*--e && i)
 		i--;
+	if (i) {
+		while (!(*e & (1 << j)))
+			j--;
+		*c = 2;
 	}
-	flag[i] = -1;
-}
-
-int PowerMode(byteint A, byteint C, byteint D, signed char flag[400])
-{
-	byteint buf;
-	byteint result;
-	byteint temp, P;
-	register i;
-
-	IntCpy(temp, A);
-	if (flag[399] == 1)
-		IntCpy(result, A);
-	else
-		IntCpy(result, ONEVALUE);
-	i = 398;
-	while (flag[i] != -1){
-		ShoutBlockingHook();
-		Multiply(temp, temp, buf);
-		SetMode(buf, C, temp, P);
-		if (flag[i] != 0){
-			Multiply(temp, result, buf);
-			SetMode(buf, C, result, P);
-		}
-		i--;
-	}
-	IntCpy(buf, C);
-	IntCpy(D, result);
-	Substract(buf, ONEVALUE, temp);
-	if (IntCmp(result, ONEVALUE) == 0)
-		return 1;
-	if (IntCmp(result, temp) == 0)
-		return 2;
-	return 0;
-}
-
-int Prime(byteint Prm)
-{
-	int i, k, ok, cnt = 0;
-	signed char flag[400];
-	byteint A, B, D, buf1, buf2;
-	int pass = 0, pass_2 = 0;
-	while (1){
-		ShoutBlockingHook();
-		cnt++;
-		IntRandom(B, MLENGTH);
-		IntCpy(Prm, B);
-		Substract(B, ONEVALUE, buf1);
-		SetMode(buf1, TWOVALUE, buf2, B);
-		TransBi(B, flag);
-		ok = 1;
-		for (i = 0; i<TESTNUM; i++){
-			LoadInt(A, Model[i]);
-			k = PowerMode(A, Prm, D, flag);
-			if (k != 1 && k != 2)
-				break;
-			if (k == 2){
-				pass_2 = 1;
+	mp = m + BIG_INTEGER_SIZE;
+	while (!*--mp && p)
+		p--;
+	if (*mp & SIGN_BIT && p < BIG_INTEGER_SIZE)
+		p++;
+	while (i--) {
+		while (j--) {
+			pmm(c, c, m, p);
+			if (*e & (1 << j)) {
+				sl(c);
+				if (sb(c, m)) ad(c, m);
 			}
 		}
-		if (ok && pass_2){
+		e--;
+		j = UNIT_BITS;
+	}
+	cl(ee);
+	*ee = 1;
+	return (!cu(c, ee));
+}
+
+/*
+* next_prime(extInteger a) -- find next probable prime >= a
+*/
+
+void next_prime(extInteger a)
+{
+	bigInteger b;
+	*a |= 1;
+	cl(b); *b = 2;
+	for (;;) {
+		if (!sieve_prime(a)) {
+			if (prob_prime(a))
+				return;
+		}
+		ad(a, b);
+	}
+}
+
+/*
+* bits rsa_gen(rsa_key *key) -- generate a RSA key from key->p and key->q
+* Initialize key->p and key->q either with primes or strong random
+* integers of apporopriate size. Returns number of bits in modulus key->pq
+* or 0 if key generation failed.
+*/
+
+uint32 rsa_gen(rsa_key *k)
+{
+	bigInteger p1, q1, pq1, f, g, t;
+	next_prime(k->p);
+	next_prime(k->q);
+	if (cu(k->p, k->q) < 0) {
+		cp(t, k->p);
+		cp(k->p, k->q);
+		cp(k->q, t);
+	}
+	hn(t, "1");
+	cp(p1, k->p);
+	sb(p1, t);
+	cp(q1, k->q);
+	sb(q1, t);
+	cp(g, p1);
+	gd(g, q1);
+	hn(t, "ff");//255
+	if (cu(t, g) < 0)
+		return 0;
+	cp(k->pq, k->p);
+	mu(k->pq, k->q);
+	cp(pq1, p1);
+	mu(pq1, q1);
+	cp(f, pq1);
+	dm(f, g, t);
+	hn(k->e, "3");
+	hn(k->qp, "1");
+	cp(t, pq1);
+	gd(t, k->e);
+	if (cu(t, k->qp)) {
+		hn(k->e, "10001");
+		cp(t, pq1);
+		gd(t, k->e);
+		if (cu(t, k->qp))
 			return 0;
-		}
 	}
+	cp(k->d, k->e);
+	iv(k->d, f);
+	cp(t, k->d);
+	dm(t, p1, k->dp);
+	cp(t, k->d);
+	dm(t, q1, k->dq);
+	cp(k->qp, k->q);
+	iv(k->qp, k->p);
+	cp(t, k->pq);
+	for (k->b = 0; ts(t); sr(t), k->b++)
+		; /* VOID */
+	return (k->b);
 }
 
-int ComputingPK(byteint Rvalue, byteint SK, byteint PK)
+/*
+* rsa_dec(extInteger m, rsa_key *key) -- low level rsa decryption. Result undefined
+* (ie. wrong) if key is not private rsa key.
+*/
+
+void rsa_dec(extInteger m, rsa_key * k)
 {
-	register i;
-	byteint PA, PB, PC, buf, temp, buf2;
-	SetZero(PK);
-	while (1)
-	{
-		IntRandom(SK, SKLENGTH);
-		IntCpy(PB, SK);
-		IntCpy(PA, Rvalue);
-		while (1) {
-			ShoutBlockingHook();
-			SetMode(PA, PB, PC, PK);
-			i = IntCmp(PC, ONEVALUE);
-			if (i == 0)
-				break;
-			i = IntCmp(PC, ZEROVALUE);
-			if (i == 0){
-				i = -1;
-				break;
-			}
-			IntCpy(PA, PB);
-			IntCpy(PB, PC);
-		}
-		if (i == 0)
-			break;
-	}
-	IntCpy(temp, ONEVALUE);
-	IntCpy(PA, Rvalue);
-	IntCpy(PB, SK);
-
-	while (1){
-		Multiply(PA, temp, buf);
-		Plus(buf, ONEVALUE, buf2);
-		SetMode(buf2, PB, buf, PK);
-		if (IntCmp(buf, ZEROVALUE) == 0)
-			break;
-		Plus(temp, ONEVALUE, buf);
-		IntCpy(temp, buf);
-	}
-	return 1;
+	bigInteger mp, mq, t;
+	cp(t, m);
+	dm(t, k->p, mp);
+	cp(t, m);
+	dm(t, k->q,
+		mq);
+	em(mp, k->dp, k->p);
+	em(mq, k->dq, k->q);
+	if (sb(mp, mq))
+		ad(mp, k->p);
+	mm(mp, k->qp,
+		k->p);
+	mu(mp, k->q);
+	ad(mp, mq);
+	cp(m, mp);
 }
 
-void PackInt(byteint A, int B)
+/*
+* rsa_enc(extInteger m, rsa_key *k) -- low level rsa encryption
+*/
+
+void rsa_enc(extInteger m, rsa_key * k)
 {
-	register i = DATALENGTH - 1;
-
-	SetZero(A);
-	while (B>0){
-		A[i--] = B % 10;
-		B = B / 10;
-	}
+	em(m, k->e, k->pq);
 }
 
-int StrToByt(char *str, byteint byt)
+/*
+* len = n_to_b(unsigned char *buf, extInteger a) -- convert a to bytes, most
+* significant byte first. Returns number of bytes written to buf. buf
+* should be large enough to hold sizeof(bigInteger) bytes. (Note that number
+* is handled as unsigned, negative value converts to sizeof(bigInteger) bytes.)
+* (XXX check portablility when converting to not-16/32 bit machine)
+*/
+uint32 n_to_b(unsigned char *b, extInteger a)
 {
-	unsigned int m;
-	SetZero(byt);
-	for (m = 0; m<strlen(str); m++)
-		byt[DATALENGTH - 1 - m] = str[strlen(str) - m - 1] - '0';
-	return 1;
+	uint32 i = BIG_INTEGER_SIZE - 1, l = 1;
+	a += BIG_INTEGER_SIZE;
+	while (!*--a && i)
+		i--;
+	if (*a > 255) {
+		*b++ = *a >> 8;
+		l++;
+	}
+	*b++ = *a;
+	while (i--) {
+		*b++ = *--a >> 8;
+		*b++ = *a;
+		l += 2;
+	}
+	return (l);
 }
 
-void BytToStr(byteint byt, char *str)
+/*
+* b_to_n(extInteger a, unsigned char *buf,uint32 len) -- convert len bytes from
+* buf to value a. Conversion is unsigned, most significant byte first.
+* (XXX check portablility when converting to not-16/32 bit machine)
+*/
+
+void b_to_n(extInteger a, unsigned char *b, uint32 l)
 {
-	unsigned  int i = 0, j = 0;
-	while (i<DATALENGTH&&byt[i] == 0) i++;
-	for (; i<DATALENGTH; i++, j++)
-	{
-		str[j] = byt[i] + '0';
+	uint32 i;
+	if (l > BIG_INTEGER_SIZE * sizeof(uint16))
+		l = BIG_INTEGER_SIZE * sizeof(uint16);
+	b += l;
+	cl(a);
+	i = l / 2;
+	while (i--) {
+		*a = *--b;
+		*a++ |= (uint32)*--b << 8;
 	}
+	if (l & 1)
+		*a = *--b;
 }
+

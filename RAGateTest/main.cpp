@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <conio.h>
 #include "RAEncrypt.h"
-#include "rsa.h"
 #include "sha2.h"
+#include "rsa.h"
 #include <string.h>
 
 #define FUCK_VISUAL_STUDIO
@@ -25,12 +25,33 @@ int main(int argc, char **argv) {
 	}
 	printf("\n");
 
-	// Verify RSA Module
-	byteint sk, pk, r;
-	printf("Generate result:%d\n", RsaPrepare(sk, pk, r));
-	printf("Write result:%d\n", WriteRsaFile(r, pk, sk));
-	printf("Read result:%d\n", ReadRsaFile(r, pk, sk));
-	printf("Key press any key to continue...\n");
+	//Verify RSA encrypt
+	rsa_key key;
+	bigInteger text, d;
+	char verify_data[3][32];
+	for (i = 0; i<30; i++){
+		verify_data[1][i] = '1';
+		verify_data[2][i] = '1';
+	}
+	verify_data[1][30] = '0';
+	verify_data[2][30] = '1';
+	verify_data[1][31] = '1';
+	verify_data[2][31] = 'a';
+	hn(key.p, verify_data[1]);
+	hn(key.q, verify_data[2]);
+
+	unsigned short r;
+	for (r = 0; r<16; r++){
+		text[r] = r;
+	}
+	
+	rsa_gen(&key);
+	rsa_enc(text, &key);
+
+	cp(d, text);
+	em(d, key.d, key.pq); /* slow way */
+	rsa_dec(d, &key); /* faster way */
+
 #ifdef FUCK_VISUAL_STUDIO
 	_getch();
 #else
