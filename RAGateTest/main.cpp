@@ -7,6 +7,9 @@
 
 #define FUCK_VISUAL_STUDIO
 
+void loadIntegerFromFile(extInteger I, char *fileName){
+
+}
 int main(int argc, char **argv) {
 	// TODO Verify modules here
 
