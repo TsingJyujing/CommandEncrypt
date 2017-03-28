@@ -15,21 +15,21 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="RAEncrypt.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="sha2.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="rsa.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="hex_utility.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="cmd_encrypt.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sha2.c">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="RAEncrypt.c">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp">
@@ -38,5 +38,22 @@
     <ClCompile Include="rsa.c">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="hex_utility.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="cmd_encrypt.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="key\modulus.hex">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="key\private_key.hex">
+      <Filter>资源文件</Filter>
+    </None>
+    <None Include="key\public_key.hex">
+      <Filter>资源文件</Filter>
+    </None>
   </ItemGroup>
 </Project>

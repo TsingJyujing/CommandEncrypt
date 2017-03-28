@@ -85,6 +85,8 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+      <MinimalRebuild>true</MinimalRebuild>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -139,15 +141,27 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="RAEncrypt.h" />
+    <ClInclude Include="hex_utility.h" />
+    <ClInclude Include="cmd_encrypt.h" />
     <ClInclude Include="rsa.h" />
     <ClInclude Include="sha2.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="hex_utility.c" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="RAEncrypt.c" />
-    <ClCompile Include="rsa.c" />
+    <ClCompile Include="cmd_encrypt.c" />
+    <ClCompile Include="rsa.c">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
+      <DebugInformationFormat Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">None</DebugInformationFormat>
+      <MinimalRebuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</MinimalRebuild>
+      <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Default</BasicRuntimeChecks>
+    </ClCompile>
     <ClCompile Include="sha2.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="key\modulus.hex" />
+    <None Include="key\private_key.hex" />
+    <None Include="key\public_key.hex" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -44,4 +44,13 @@ public class PrintData {
         }
     }
 
+    public static void saveFlipByteArray(byte[] byteArray, String fileName) throws IOException{
+        try (FileWriter fr = new FileWriter(fileName)) {
+            for (int i = 0; i<byteArray.length; i++){
+                fr.write(String.format("%02X ", byteArray[byteArray.length - 1 - i]));
+            }
+            fr.flush();
+            fr.close();
+        }
+    }
 }

@@ -1,10 +1,11 @@
 #ifndef	RSA_H
 #define RSA_H
 
-#ifndef BIG_INTEGER_SIZE
-#define BIG_INTEGER_SIZE 16
-#endif
 #define MRSA_C
+
+#ifndef	uint8
+typedef unsigned char uint8;
+#endif
 
 #ifndef	uint16	
 typedef unsigned short uint16;
@@ -14,19 +15,56 @@ typedef unsigned short uint16;
 typedef unsigned int uint32;
 #endif
 
-typedef uint16 *extInteger; // extInteger-->*uint16
-typedef uint16 bigInteger[BIG_INTEGER_SIZE];// big integer using word array, bigInteger-->uint16[BIG_INTEGER_SIZE]
+#ifndef	uint64
+typedef unsigned long uint64;
+#endif
+
+#ifndef	int8
+typedef signed char int8;
+#endif
+
+#ifndef	int16	
+typedef signed short int16;
+#endif
+
+#ifndef	int32
+typedef signed int int32;
+#endif
+
+#ifndef	int64
+typedef signed long int64;
+#endif
+
+#define UNIT_BITS 16	/* unit bits */
+#define PASSWORD_BYTES 128
+
+#if !defined(RSA_ONLY) || defined(MRSA_C)
+#if UNIT_BITS==8 // If mcu/pc is 16bit machine
+#define UNIT_TYPE uint8
+#define SIGN_BIT (1<<7)	/* top bit of unit */
+#ifndef BIG_INTEGER_SIZE
+#define BIG_INTEGER_SIZE PASSWORD_BYTES*2
+#endif
+#elif UNIT_BITS==16 // If mcu/pc is 32bit machine and above
+#define UNIT_TYPE uint16
+#define SIGN_BIT (1<<15)	/* top bit of unit */
+#ifndef BIG_INTEGER_SIZE
+#define BIG_INTEGER_SIZE PASSWORD_BYTES*2
+#endif
+#else 
+#error "Undefined integer type"
+#endif
+#define PRIMES 50		/* number of primes in prime table */
+
+
+
+typedef UNIT_TYPE *extInteger;
+typedef UNIT_TYPE  bigInteger[BIG_INTEGER_SIZE];
 
 typedef struct rsa_key {
 	uint32 b;
 	bigInteger pq, e, d, p, q, dp, dq, qp;
 } rsa_key;
-
-#if !defined(RSA_ONLY) || defined(MRSA_C)
-
-#define UNIT_BITS 16		/* unit bits */
-#define SIGN_BIT (1<<15)	/* top bit of unit */
-#define PRIMES 50		/* number of primes in prime table */
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,7 +96,7 @@ extern "C" {
 
 	//void copyhash(extInteger a);
 	uint32	sieve_prime(extInteger);
-	int	prob_prime(extInteger);
+	int		prob_prime(extInteger);
 	void	next_prime(extInteger);
 	uint32 	rsa_gen(rsa_key *);
 	void 	rsa_enc(extInteger, rsa_key *);

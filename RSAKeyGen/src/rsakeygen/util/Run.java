@@ -1,5 +1,7 @@
 package rsakeygen.util;
 
+import java.math.BigInteger;
+
 /**
  *
  * @author Yuan Yifan
@@ -15,14 +17,15 @@ public class Run {
 
         System.out.println("公钥:");
         PrintData.printByteArray(ru.publicKey.getPublicExponent().toByteArray(), 32);
-        PrintData.saveByteArray(ru.publicKey.getPublicExponent().toByteArray(), "public_key.hex");
+        PrintData.saveFlipByteArray(ru.publicKey.getPublicExponent().toByteArray(), "public_key.hex");
+        
         System.out.println("私钥:");
         PrintData.printByteArray(ru.privateKey.getPrivateExponent().toByteArray(), 32);
-        PrintData.saveByteArray(ru.privateKey.getPrivateExponent().toByteArray(), "private_key.hex");
+        PrintData.saveFlipByteArray(ru.privateKey.getPrivateExponent().toByteArray(), "private_key.hex");
         
         System.out.println("模数 M:");
         PrintData.printByteArray(ru.privateKey.getModulus().toByteArray(), 32);
-        PrintData.saveByteArray(ru.privateKey.getModulus().toByteArray(), "modulus.hex");
+        PrintData.saveFlipByteArray(ru.privateKey.getModulus().toByteArray(), "modulus.hex");
         
         // 使用公钥加密  
         String msg = "It's an interesting algorithm.";  

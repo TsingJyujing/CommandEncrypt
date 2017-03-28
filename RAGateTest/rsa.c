@@ -205,10 +205,7 @@ void mm(extInteger a, extInteger b, extInteger m)
 */
 
 #ifndef AMIGA
-
-static void
-pmm(extInteger aa, extInteger b, extInteger m, uint32 p)
-{
+void pmm(extInteger aa, extInteger b, extInteger m, uint32 p) {
 	uint32 k, c, j = UNIT_BITS, i;
 	bigInteger v;
 	extInteger a;
