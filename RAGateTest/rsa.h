@@ -49,7 +49,7 @@ typedef signed long int64;
 #define UNIT_TYPE uint16
 #define SIGN_BIT (1<<15)	/* top bit of unit */
 #ifndef BIG_INTEGER_SIZE
-#define BIG_INTEGER_SIZE PASSWORD_BYTES*2
+#define BIG_INTEGER_SIZE PASSWORD_BYTES
 #endif
 #else 
 #error "Undefined integer type"

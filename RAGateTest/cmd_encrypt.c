@@ -25,6 +25,7 @@ RSAErrorType RSAEncrypt(
 	//第2、3字节为随机盐，防止选择密文攻击
 	buffer[1] = rand() & 0xff;
 	buffer[2] = rand() & 0xff;
+
 	//将长度写入开头的第一个字节中
 	if (dataSize > 124) {
 		return TO_MUCH_DATA;
@@ -32,6 +33,7 @@ RSAErrorType RSAEncrypt(
 	else{
 		buffer[3] = dataSize;
 	}
+
 	//拷贝数组
 	memcpy(buffer + 4, rawData, dataSize);
 	loadKey(edata, buffer, PASSWORD_BYTES);
