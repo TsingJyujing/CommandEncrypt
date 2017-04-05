@@ -21,22 +21,26 @@ signed char isHexChar(unsigned char inChar){
 	}
 }
 
-void loadHex(char * fileName, unsigned char * bytes, int arrayLen, int *readLen){
+void loadHex(char * fileName, unsigned char * bytes, unsigned int arrayLen, unsigned int *readLen){
 	FILE *fp = fopen(fileName, "r");
+    int nowRead;
+	unsigned char byteFixed = 0;
+    
 	if (fp == NULL){
 		printf("Failed to open file %s.\n", fileName);
 		return;
 	}
-	int nowRead = fgetc(fp);
-	unsigned char byteFixed = 0;
+    
+	nowRead = fgetc(fp);
+    
 	*readLen = 0;
 	bytes[*readLen] = 0;
 	while (nowRead != EOF){
-		char hexVal = isHexChar(nowRead);
+		signed char hexVal = isHexChar(nowRead);
 		if (*readLen >= arrayLen){
 			break; 
 		}
-		if (hexVal >= 0x0 && hexVal <= 0xF){
+		if (hexVal >= 0 && hexVal <= 15){
 			bytes[*readLen] = (bytes[*readLen] << 4) | hexVal;
 			byteFixed = 1;
 		}
@@ -54,19 +58,21 @@ void loadHex(char * fileName, unsigned char * bytes, int arrayLen, int *readLen)
 }
 
 void printByteArray(unsigned char *bytearray, unsigned int len) {
-	printf("OFFSET: ");
-	for (int i = 0; i < len; ++i){
+    int i;
+	printf("\nOFFSET: ");
+	for (i = 0; i < len; ++i){
 		printf("%02X ", i);
 	}
 	printf("\nDATA:   ");
-	for (int i = 0; i < len; ++i){
+	for (i = 0; i < len; ++i){
 		printf("%02X ", bytearray[i]);
 	}
 	printf("\n\n");
 }
 
 void printByteArrayFixWidth(unsigned char *bytearray, unsigned int len, unsigned int lineChange){
-    unsigned int i = 0;
+    unsigned int i = 0, j = 0;
+    unsigned int printLines;
     printf("    ");
     if (len < lineChange) {
         for(i = 0; i<len; ++i) {
@@ -78,14 +84,25 @@ void printByteArrayFixWidth(unsigned char *bytearray, unsigned int len, unsigned
         }
     }
     printf("\n");
-    unsigned int printLines = (len-1)/lineChange + 1;
+    printLines = (len-1)/lineChange + 1;
     for (i = 0; i<printLines; ++i){
         int indexStart = i*lineChange;
         int indexEnd = ((i+1)*lineChange<len)?(i+1)*lineChange:len;
         printf("%03X ", i);
-        for (int j = indexStart; j<indexEnd; j++) {
+        for (j = indexStart; j<indexEnd; j++) {
             printf("%02X ", bytearray[j]);
         }
         printf("\n");
     }
 }
+
+void printByteArrayComment(
+    unsigned char *bytearray, 
+    unsigned int len, 
+    unsigned int lineChange, 
+    char *comment
+    ){
+    printf("\n%s\n", comment);
+    printByteArrayFixWidth(bytearray, len, lineChange);
+}
+

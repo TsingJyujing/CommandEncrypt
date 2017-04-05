@@ -9,6 +9,7 @@
 #define RSA_COMMON_H
 
 #define USE_GMP_LIBRARY
+
 #define NULL_PTR ((void *)0)
 #define ENCRYPT_BLOCK_BYTE_SIZE 128
 

@@ -1,6 +1,6 @@
 #include "rsa_common.h"
-#include <malloc.h>
 #include <string.h>
+#include <stdlib.h>
 
 void freeKey(bytesBuffer *bf) {
     free(bf->data);
@@ -15,3 +15,4 @@ void loadKey(bytesBuffer *bf, unsigned char *data, unsigned int dataSize) {
         memcpy(bf->data, data, dataSize);
     }
 }
+

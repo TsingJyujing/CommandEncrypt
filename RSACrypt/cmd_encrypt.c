@@ -1,13 +1,17 @@
 #include "cmd_encrypt.h"
+#include "hex_utility.h"
 
+#ifdef USE_GMP_LIBRARY
 void byteBuffer2bigInteger(bytesBuffer bf, mpz_t bigInteger) {
     mpz_import(bigInteger, bf.size, ORDER, sizeof (bf.data[0]), ENDIAN, NAILS, bf.data);
 }
+#endif
 
 RSAErrorType RSACryptBlock(
         RSAPassword RSAkey,
         byte rawPack[ENCRYPT_BLOCK_BYTE_SIZE],
         byte outputData[ENCRYPT_BLOCK_BYTE_SIZE]) {
+        
 #ifdef USE_GMP_LIBRARY
     mpz_t bImodulus;
     mpz_t bIkey;
@@ -24,14 +28,17 @@ RSAErrorType RSACryptBlock(
 
     mpz_import(dataRaw, ENCRYPT_BLOCK_BYTE_SIZE, ORDER, sizeof (rawPack[0]), ENDIAN, NAILS, rawPack);
     mpz_powm(dataCrypted, dataRaw, bIkey, bImodulus);
+    
     /*
-     *  These code used in debug mode only
-    printf("RAW = [%s]\n", mpz_get_str(NULL, 16, dataRaw));
-    printf("ENC = [%s]\n", mpz_get_str(NULL, 16, dataCrypted));
-    */
+     * These code used in debug mode only
+     * printf("RAW = [%s]\n", mpz_get_str(NULL, 16, dataRaw));
+     * printf("ENC = [%s]\n", mpz_get_str(NULL, 16, dataCrypted));
+     */
     mpz_export(outputData, NULL, ORDER, SIZE_UNIT , ENDIAN, NAILS, dataCrypted);
+
 #else
-    // TODO Add RSA without GMP Library here
+    // If can not compile min-gmp on you platform
+    //contact me to require a very slow but strong RSA algorithm
 #endif
     return NO_ERROR;
 }
@@ -41,11 +48,12 @@ RSAErrorType RSAEncrypt(
         byteArray rawData, unsigned char dataSize,
         byte outputData[ENCRYPT_BLOCK_BYTE_SIZE]) {
 
+    byte buffer[ENCRYPT_BLOCK_BYTE_SIZE] = {0};
+    unsigned int i = 0;
+    
     if (dataSize > MAX_ENCRYPT_SIZE) {
         return TO_MUCH_DATA;
     }
-    byte buffer[ENCRYPT_BLOCK_BYTE_SIZE] = {0};
-    unsigned int i = 0;
 
     //开头第1个字节写入Size
     buffer[0] = dataSize;
@@ -79,18 +87,20 @@ RSAErrorType RSADecrypt(
 
     byte buffer[ENCRYPT_BLOCK_BYTE_SIZE] = {0};
     RSAErrorType decResult = RSACryptBlock(key, encryptedData, buffer);
-    if (decResult != NO_ERROR) {
-        return decResult;
-    }
     //Verify
     unsigned char verifyFailed = 0x00;
     unsigned char dataSize = buffer[0];
     unsigned short i = 0;
+    unsigned char xorVerify = 0x00;
+    
+    if (decResult != NO_ERROR) {
+        return decResult;
+    }
+    
     verifyFailed = ASSERT_OR(buffer[ENCRYPT_BLOCK_BYTE_SIZE - 1] == 0x00, verifyFailed);
     verifyFailed = ASSERT_OR(buffer[ENCRYPT_BLOCK_BYTE_SIZE - 2] == 0x00, verifyFailed);
     verifyFailed = ASSERT_OR(dataSize <= MAX_ENCRYPT_SIZE, verifyFailed);
 
-    unsigned char xorVerify = 0x00;
     for (i = 0; i < dataSize; i++) {
         xorVerify ^= buffer[i + 4];
     }
@@ -125,7 +135,8 @@ RSAErrorType digitalFingerPrintCheck(
         ) {
     byte Digest[MD5_HASH_SIZE] = {0};
     byte DigestDecrypt[MD5_HASH_SIZE] = {0};
-    unsigned int decryptResult;
+    RSAErrorType decryptResult;
+    int memcmpResult = 0x00;
     unsigned char decryptSize;
 
     MD5(document, docSize, Digest);
@@ -137,7 +148,7 @@ RSAErrorType digitalFingerPrintCheck(
     if (decryptResult != NO_ERROR || decryptSize != MD5_HASH_SIZE) {
         return decryptResult;
     } else {
-        decryptResult = memcmp(DigestDecrypt, Digest, MD5_HASH_SIZE);
-        return decryptResult == 0 ? NO_ERROR : VERIFY_FAILED;
+        memcmpResult = memcmp(DigestDecrypt, Digest, MD5_HASH_SIZE);
+        return memcmpResult == 0 ? NO_ERROR : VERIFY_FAILED;
     }
 }

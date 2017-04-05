@@ -10,13 +10,11 @@
 #define ASSERT_OR(x,y) (y|ASSERT(x))
 
 #ifdef USE_GMP_LIBRARY
-#include "gmp.h"
+#include "mini-gmp.h"
 #define ENDIAN 0
 #define NAILS 0
 #define ORDER 1
 #define SIZE_UNIT 1
-#else
-// TODO Add RSA without GMP Library here
 #endif
 
 typedef enum {
@@ -33,9 +31,9 @@ typedef unsigned char byte;
 #ifdef __cplusplus
 extern "C" {
 #endif
-    
+    #ifdef USE_GMP_LIBRARY
     void byteBuffer2bigInteger(bytesBuffer bf, mpz_t bigInteger);
-    
+    #endif
     
     // RSA对byteBuffer的加密和解密
     // 注意dataSize不能超过120byte即960bit
