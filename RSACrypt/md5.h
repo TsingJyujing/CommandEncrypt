@@ -2,7 +2,7 @@
 #define _MD5_ALGORITHM_HEADFILE_
 /**
  * @file md5.h
- * @author 袁逸凡
+ * @author 我也不知道，我整理了一下。
  * @function MD5散列算法
  */
 #ifdef __cplusplus
