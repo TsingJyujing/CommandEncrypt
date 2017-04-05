@@ -1,6 +1,12 @@
 #ifndef __CMD_ENCRYPT_HEADFILE__
 #define __CMD_ENCRYPT_HEADFILE__
 
+/**
+ * @file cmd_encrypt.h
+ * @author 袁逸凡
+ * @function 指令加密系统和数字签名系统
+ */
+ 
 #include <string.h>
 #include <stdlib.h>
 #include "rsa_common.h"
@@ -10,11 +16,13 @@
 #define ASSERT_OR(x,y) (y|ASSERT(x))
 
 #ifdef USE_GMP_LIBRARY
-#include "mini-gmp.h"
-#define ENDIAN 0
-#define NAILS 0
-#define ORDER 1
-#define SIZE_UNIT 1
+    #include "mini-gmp.h"
+    #define ENDIAN 0
+    #define NAILS 0
+    #define ORDER 1
+    #define SIZE_UNIT 1
+#else
+    #error "TODO: HAVEN'T REALISTIC FUNCTION WITHOUT GMP LIBRARY."
 #endif
 
 typedef enum {
@@ -32,12 +40,16 @@ typedef unsigned char byte;
 extern "C" {
 #endif
     #ifdef USE_GMP_LIBRARY
+    /**
+     * @function 数组转大数的函数，其实完全可以私有的
+     * @param key 私钥/公钥(和解密的时候正好相反)
+     * @param modulus 模数
+     */
     void byteBuffer2bigInteger(bytesBuffer bf, mpz_t bigInteger);
     #endif
     
     // RSA对byteBuffer的加密和解密
     // 注意dataSize不能超过120byte即960bit
-
     /**
      * @function 数据写入校验加密
      * @param key 私钥/公钥(和解密的时候正好相反)

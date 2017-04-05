@@ -5,6 +5,12 @@ typedef unsigned char * POINTER;
 typedef unsigned char byte;
 typedef unsigned int uint32;
 
+/* MD5 context. */
+typedef struct {
+	unsigned int state[4]; /* state (ABCD) */
+	unsigned int count[2]; /* number of bits, modulo 2^64 (lsb first) */
+	unsigned char buffer[64]; /* input buffer */
+} MD5_CTX;
 //function of mapping relation
 
 /* Constants for MD5Transform routine.*/

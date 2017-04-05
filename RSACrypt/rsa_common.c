@@ -2,12 +2,12 @@
 #include <string.h>
 #include <stdlib.h>
 
-void freeKey(bytesBuffer *bf) {
+void deleteByteBuffer(bytesBuffer *bf) {
     free(bf->data);
     bf->size = 0;
 }
 
-void loadKey(bytesBuffer *bf, unsigned char *data, unsigned int dataSize) {
+void newByteBuffer(bytesBuffer *bf, unsigned char *data, unsigned int dataSize) {
     bf->data = NULL_PTR;
     bf->data = (unsigned char *) malloc(dataSize * sizeof (unsigned char));
     if (bf->data != NULL_PTR) {
