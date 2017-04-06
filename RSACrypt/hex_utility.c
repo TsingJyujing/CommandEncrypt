@@ -1,6 +1,7 @@
 #include "hex_utility.h"
 #include <stdio.h>
 
+//判断是否HexChar（[0..9 a..f A..F]），大小写不敏感，私有函数
 signed char isHexChar(unsigned char inChar){
 	if (inChar >= 'a' && inChar <= 'f') {
 		inChar -= 'a';

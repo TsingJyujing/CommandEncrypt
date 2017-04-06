@@ -38,7 +38,7 @@ RSAErrorType RSACryptBlock(
 
 #else
     // If can not compile min-gmp on you platform
-    //contact me to require a very slow but strong RSA algorithm
+    // contact yuanyifan@deewinfl.com to require a very slow but strong RSA algorithm
 #endif
     return NO_ERROR;
 }
@@ -51,6 +51,7 @@ RSAErrorType RSAEncrypt(
     byte buffer[ENCRYPT_BLOCK_BYTE_SIZE] = {0};
     unsigned int i = 0;
     
+    //加密数据不得超过MAX_ENCRYPT_SIZE，暂时不支持分块儿加密
     if (dataSize > MAX_ENCRYPT_SIZE) {
         return TO_MUCH_DATA;
     }
@@ -121,7 +122,9 @@ RSAErrorType digitalFingerPrintGenerate(
         byteArray fingerPrint
         ) {
     byte Digest[MD5_HASH_SIZE] = {0};
+    //求文档HASH
     MD5(document, docSize, Digest);
+    //反馈签名结果
     return RSAEncrypt(
             privateKey,
             Digest, MD5_HASH_SIZE,
@@ -138,15 +141,16 @@ RSAErrorType digitalFingerPrintCheck(
     RSAErrorType decryptResult;
     int memcmpResult = 0x00;
     unsigned char decryptSize;
-
+    
+    //求Hash
     MD5(document, docSize, Digest);
-
+    //解密获得它的Hash
     decryptResult = RSADecrypt(
             publicKey,
             fingerPrint,
             DigestDecrypt, &decryptSize);
     if (decryptResult != NO_ERROR || decryptSize != MD5_HASH_SIZE) {
-        return decryptResult;
+        return VERIFY_FAILED;//校验失败
     } else {
         memcmpResult = memcmp(DigestDecrypt, Digest, MD5_HASH_SIZE);
         return memcmpResult == 0 ? NO_ERROR : VERIFY_FAILED;
