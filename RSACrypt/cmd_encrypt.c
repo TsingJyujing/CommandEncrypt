@@ -59,12 +59,16 @@ RSAErrorType RSAEncrypt(
     //开头第1个字节写入Size
     buffer[0] = dataSize;
 
+    #ifndef USE_INNER_VALIDATION
+    buffer[1] = rand() & 0xff;
+    #else
     //第2个字节写入校验值
     buffer[1] = 0x00;
     for (i = 0; i < dataSize; i++) {
         buffer[1] ^= rawData[i];
         buffer[4 + i] = rawData[i];
     }
+    #endif
 
     //第3、4字节为随机盐，防止选择密文攻击
     buffer[2] = rand() & 0xff;
@@ -101,11 +105,13 @@ RSAErrorType RSADecrypt(
     verifyFailed = ASSERT_OR(buffer[ENCRYPT_BLOCK_BYTE_SIZE - 1] == 0x00, verifyFailed);
     verifyFailed = ASSERT_OR(buffer[ENCRYPT_BLOCK_BYTE_SIZE - 2] == 0x00, verifyFailed);
     verifyFailed = ASSERT_OR(dataSize <= MAX_ENCRYPT_SIZE, verifyFailed);
-
+    #ifdef USE_INNER_VALIDATION
     for (i = 0; i < dataSize; i++) {
         xorVerify ^= buffer[i + 4];
     }
     verifyFailed = ASSERT_OR(xorVerify == buffer[1], verifyFailed);
+    #endif
+    
     if (verifyFailed) {
         return VERIFY_FAILED;
     }
