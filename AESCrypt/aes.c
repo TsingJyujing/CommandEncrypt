@@ -2,9 +2,7 @@
  * Advanced Encryption Standard
  * 
  */
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
+#include "aes.h"
 
 /*
  * Addition in GF(2^8)

@@ -1,9 +1,12 @@
+#include "aes.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
 
 int main(int argc, char *argv[]) {
 
     uint8_t i;
-    
+
     //在这里输入你的密钥，可以是128bit，192bit或者256bit
     uint8_t key[] = {
         0x00, 0x01, 0x02, 0x03,
@@ -28,21 +31,21 @@ int main(int argc, char *argv[]) {
     uint8_t *w; // expanded key
 
     switch (sizeof (key)) {
-        case 16: 
+        case 16:
             Nk = 4;
             Nr = 10;
             break;
-        case 24: 
+        case 24:
             Nk = 6;
             Nr = 12;
             break;
-        case 32: 
+        case 32:
             Nk = 8;
             Nr = 14;
             break;
         default:
             printf("Can't recongnize your password size.");
-            break;//__nop__();
+            break; //__nop__();
     }
 
     w = malloc(Nb * (Nr + 1)*4);
