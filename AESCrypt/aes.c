@@ -2,8 +2,32 @@
  * Advanced Encryption Standard
  * 
  */
+ 
 #include "aes.h"
 
+/*
+ * The cipher Key.	
+ */
+int K;
+
+/*
+ * Number of 32-bit words comprising the Cipher Key. For this 
+ * standard, Nk = 4, 6, or 8.
+ */
+int Nk;
+
+/*
+ * Number of rounds, which is a function of  Nk  and  Nb (which is 
+ * fixed). For this standard, Nr = 10, 12, or 14.
+ */
+int Nr;
+
+/*
+ * Number of columns (32-bit words) comprising the State. For this 
+ * standard, Nb = 4.
+ */
+const int Nb = 4;
+    
 /*
  * Addition in GF(2^8)
  * http://en.wikipedia.org/wiki/Finite_field_arithmetic
@@ -66,29 +90,6 @@ void coef_mult(uint8_t *a, uint8_t *b, uint8_t *d) {
     d[2] = gmult(a[2], b[0])^gmult(a[1], b[1])^gmult(a[0], b[2])^gmult(a[3], b[3]);
     d[3] = gmult(a[3], b[0])^gmult(a[2], b[1])^gmult(a[1], b[2])^gmult(a[0], b[3]);
 }
-
-/*
- * The cipher Key.	
- */
-int K;
-
-/*
- * Number of columns (32-bit words) comprising the State. For this 
- * standard, Nb = 4.
- */
-int Nb = 4;
-
-/*
- * Number of 32-bit words comprising the Cipher Key. For this 
- * standard, Nk = 4, 6, or 8.
- */
-int Nk;
-
-/*
- * Number of rounds, which is a function of  Nk  and  Nb (which is 
- * fixed). For this standard, Nr = 10, 12, or 14.
- */
-int Nr;
 
 /*
  * S-box transformation table
@@ -344,7 +345,7 @@ void rot_word(uint8_t *w) {
 void key_expansion(uint8_t *key, uint8_t *w) {
 
     uint8_t tmp[4];
-    uint8_t i, j;
+    uint8_t i;
     uint8_t len = Nb * (Nr + 1);
 
     for (i = 0; i < Nk; i++) {
@@ -439,4 +440,55 @@ void inv_cipher(uint8_t *in, uint8_t *out, uint8_t *w) {
             out[i + 4 * j] = state[Nb * i + j];
         }
     }
+}
+
+
+void aes_encrypt(uint8_t *in, uint8_t *out, uint8_t *key, uint16_t sizeofKey){
+    uint8_t *w;
+    switch (sizeofKey) {
+        case 16:
+            Nk = 4;
+            Nr = 10;
+            break;
+        case 24:
+            Nk = 6;
+            Nr = 12;
+            break;
+        case 32:
+            Nk = 8;
+            Nr = 14;
+            break;
+        default:
+            printf("Can't recongnize your password size.");
+            break; //__nop__();
+    }
+    w = (uint8_t *) malloc(Nb * (Nr + 1)*4 * sizeof(uint8_t));
+    key_expansion(key, w);
+    cipher(in , out , w );
+    free(w);
+}
+    
+void aes_decrypt(uint8_t *in, uint8_t *out, uint8_t *key, uint16_t sizeofKey){
+        uint8_t *w;
+    switch (sizeofKey) {
+        case 16:
+            Nk = 4;
+            Nr = 10;
+            break;
+        case 24:
+            Nk = 6;
+            Nr = 12;
+            break;
+        case 32:
+            Nk = 8;
+            Nr = 14;
+            break;
+        default:
+            printf("Can't recongnize your password size.");
+            break; //__nop__();
+    }
+    w = (uint8_t *) malloc(Nb * (Nr + 1)*4 * sizeof(uint8_t));
+    key_expansion(key, w);
+    inv_cipher(in , out , w );
+    free(w);
 }
