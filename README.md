@@ -35,3 +35,12 @@ srand(time);
 // 注释掉下面这一句即可取消校验
 #define USE_INNER_VALIDATION
 ```
+
+### 使用C版本的程序对数据作对称加密
+使用AES库即可对数据进行对称加密，使用方法是：
+```C
+extern void aes_encrypt(uint8_t *in, uint8_t *out, uint8_t *key, uint16_t sizeofKey);
+extern void aes_decrypt(uint8_t *in, uint8_t *out, uint8_t *key, uint16_t sizeofKey);
+```
+其中，in是输出内容，out是输出内容，key是密码，可以是128,192,256bit的数据。
+sizeofKey是指密钥的Byte数。
